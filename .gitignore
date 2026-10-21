@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# variables de entorno (nunca se versionan, AGENTS.md 7.7)
+.env
