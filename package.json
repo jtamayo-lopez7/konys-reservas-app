@@ -1,0 +1,18 @@
+{
+  "name": "konys_pizza",
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "expo": "~58.0.16",
+    "expo-status-bar": "~58.0.3",
+    "react": "19.3.0",
+    "react-native": "0.88.0"
+  },
+  "scripts": {
+    "start": "expo start",
+    "android": "expo start --android",
+    "ios": "expo start --ios",
+    "web": "expo start --web"
+  },
+  "private": true
+}
