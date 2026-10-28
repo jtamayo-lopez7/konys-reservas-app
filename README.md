@@ -14,14 +14,26 @@ App móvil (Android e iOS) en React Native + Expo SDK 58 (JavaScript) para que l
 npm install
 npx expo start        # Expo Go (QR)
 npx expo start -c     # limpiar caché de Metro
-npx expo lint
-npm test              # tras configurar el script de Jest
+npm run lint         # pantallas, componentes, constantes, hooks y servicios
+npm test             # Jest configurado
 npx expo install --check
 ```
 
 ## Variables de entorno
 
 Copiar `.env.example` a `.env` y completar. Nunca versionar `.env`.
+
+## Avance
+
+Etapa 3 implementada en código: pestañas Inicio / Carta / Admin (provisional),
+mesas activas, selector de 14 días, disponibilidad por jornada, formulario validado,
+creación de reservas y confirmación. La disponibilidad se consulta mediante
+`slots_ocupados`; el cliente no lee reservas y el INSERT no solicita datos de retorno.
+La confirmación utiliza datos locales en memoria, sin datos personales en las rutas.
+
+La aceptación de la etapa requiere ejecutar CP-01 a CP-13 en un celular real.
+El registro de verificaciones y pruebas pendientes está en `docs/pruebas.md`.
+El módulo administrador corresponde a la etapa 4.
 
 ## Documentación
 
