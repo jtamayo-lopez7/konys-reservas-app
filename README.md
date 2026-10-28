@@ -25,7 +25,13 @@ Copiar `.env.example` a `.env` y completar. Nunca versionar `.env`.
 
 ## Documentación
 
-- `docs/GUIA_METODOLOGICA_KONYS.md` (requisitos, decisiones, plan por etapas, pruebas)
+- `documentación/GUIA_METODOLOGICA_KONYS.md` (requisitos, decisiones, plan por etapas, pruebas)
 - `docs/COMANDOS_KONYS.txt`
 - `supabase/schema.sql` (esquema, RLS, trigger, disponibilidad)
-- `AGENTS.md` (contrato de desarrollo)
+- `documentación/AGENTS.md` (contrato de desarrollo)
+
+Las guías y la configuración local de agentes se agrupan en `documentación/`, excluida de Git. Esa carpeta debe estar disponible localmente para consultar las guías.
+
+Al comenzar una sesión con un agente, indicar: «Lee `documentación/AGENTS.md` y `documentación/GUIA_METODOLOGICA_KONYS.md` antes de trabajar; ejecuta los comandos desde la raíz del proyecto». Para Claude, cargar también `documentación/CLAUDE.md`. No asumir la carga automática de las guías o configuraciones trasladadas.
+
+`app/` en la raíz contiene las pantallas de Expo Router; `documentación/` contiene las instrucciones locales. Todas las rutas de código de las guías parten de la raíz que contiene `package.json`.

@@ -40,5 +40,8 @@ yarn-error.*
 /ios
 /android
 
-# variables de entorno (nunca se versionan, AGENTS.md 7.7)
+# variables de entorno (nunca se versionan)
 .env
+
+# documentación y configuración local de agentes
+/documentación/
