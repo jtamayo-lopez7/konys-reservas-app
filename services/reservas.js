@@ -1,4 +1,5 @@
 // RF-04, RF-05: disponibilidad pública y creación sin leer datos personales.
+// RF-12: listado y cambio de estado para el administrador (las reservas no se borran).
 import { supabase } from './supabase';
 import { consultar } from './consultas';
 import { traducir } from './errores';
@@ -41,4 +42,20 @@ export async function crear(mesaId, fecha, horaInicio, form) {
   return resultado.error ? resultado : {
     data: { ...datos, mesa_nombre: mesa.data.nombre, zona: mesa.data.zona }, error: null,
   };
+}
+
+// RF-12: el admin sí lee reservas; se trae el nombre de la mesa con un join.
+export function listarReservas({ fecha = null, manana = false, mesaId = null } = {}) {
+  let consulta = supabase.from('reservas')
+    .select('id,mesa_id,mesa:mesas(nombre),cliente_nombre,cliente_contacto,num_personas,fecha,hora_inicio,hora_fin,estado')
+    .order('fecha', { ascending: !manana }).order('hora_inicio');
+  if (fecha) consulta = consulta.eq('fecha', fecha);
+  if (mesaId) consulta = consulta.eq('mesa_id', mesaId);
+  return consultar(() => consulta);
+}
+
+// RN-06: no se borran reservas; solo cambian de estado.
+export function cambiarEstado(id, estado) {
+  return consultar(() => supabase.from('reservas')
+    .update({ estado }).eq('id', id).select('id,estado').single());
 }

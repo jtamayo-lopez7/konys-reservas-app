@@ -1,6 +1,12 @@
 // RF-01, RF-05, RF-07: mensajes seguros de los errores de datos.
+// RF-08: distingue los fallos de inicio de sesión del administrador.
 export function traducir(error) {
   const mensaje = error?.message ?? String(error ?? '');
+  // Supabase Auth (RF-08): se revisan antes que la red porque la frase de
+  // límite de intentos contiene "or s" y el detector de red la capturarían.
+  if (/invalid login credentials/i.test(mensaje)) return 'Clave incorrecta.';
+  if (/email not confirmed/i.test(mensaje)) return 'El correo del administrador no está confirmado en Supabase.';
+  if (/for security purposes/i.test(mensaje)) return 'Demasiados intentos. Espera unos segundos y vuelve a intentar.';
   const capacidad = mensaje.match(/KONYS_CAPACIDAD_EXCEDIDA:(\d+)/);
   if (capacidad) return `Esta mesa admite máximo ${capacidad[1]} personas.`;
   const mensajes = {

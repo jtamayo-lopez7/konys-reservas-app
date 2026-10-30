@@ -10,6 +10,8 @@ export default function RootLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="reservar/[mesaId]" options={{ title: 'Reservar mesa' }} />
       <Stack.Screen name="confirmacion" options={{ headerShown: false, gestureEnabled: false }} />
+      <Stack.Screen name="gestion/mesa-form" options={{ title: 'Mesa' }} />
+      <Stack.Screen name="gestion/carta" options={{ title: 'Carta · administración' }} />
     </Stack>
   </ReservaProvider>;
 }
