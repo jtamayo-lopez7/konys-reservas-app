@@ -1,7 +1,7 @@
 export const ZONAS = { salon: 'Salón', terraza: 'Terraza' };
 export const JORNADAS = { almuerzo: 'Almuerzo', noche: 'Noche' };
 export const CATEGORIAS = {
-  pizzas: 'Pizzas', entradas: 'Entradas', postres: 'Postres', bebidas: 'Bebidas',
+  pizzas: 'Pizzas', entradas: 'Entradas', postres: 'Postres', bebidas: 'Bebidas', combos: 'Combos', otros: 'Otros',
 };
 export const ESTADOS = {
   confirmada: 'Confirmada', cancelada: 'Cancelada', completada: 'Completada',

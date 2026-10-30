@@ -47,3 +47,17 @@ Las guías y la configuración local de agentes se agrupan en `documentación/`,
 Al comenzar una sesión con un agente, indicar: «Lee `documentación/AGENTS.md` y `documentación/GUIA_METODOLOGICA_KONYS.md` antes de trabajar; ejecuta los comandos desde la raíz del proyecto». Para Claude, cargar también `documentación/CLAUDE.md`. No asumir la carga automática de las guías o configuraciones trasladadas.
 
 `app/` en la raíz contiene las pantallas de Expo Router; `documentación/` contiene las instrucciones locales. Todas las rutas de código de las guías parten de la raíz que contiene `package.json`.
+
+## Carta de platos
+
+`supabase/schema.sql` incluye la carta real de 30 productos: 17 pizzas, 11 bebidas,
+una entrada y un combo, con sus descripciones y precios en COP.
+
+Para una base de datos existente, ejecutar solamente `supabase/seed_carta.sql`
+en Supabase > SQL Editor. Incorpora las categorías Combos y Otros, retira
+los cuatro platos de prueba de precio cero y carga los productos faltantes sin
+duplicarlos al repetirlo. Conserva los productos existentes con el mismo nombre
+y categoría, incluidos sus precios y disponibilidad.
+
+Después de cargarlo, abrir Carta y comprobar filtros, descripciones y precios
+(CP-13). Las fotos quedan pendientes de cargar.
