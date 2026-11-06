@@ -42,6 +42,12 @@ export function cambiarEstado(id, activa) {
 }
 
 // Una mesa con reservas no se borra (RN-07): el error 23503 lo explica en errores.js.
-export function borrar(id) {
-  return consultar(() => supabase.from('mesas').delete().eq('id', id));
+// Se pide la fila borrada con select: si RLS u otra causa impide el borrado,
+// Supabase afecta 0 filas y no devuelve error; sin esto parecería exitoso.
+export async function borrar(id) {
+  const resultado = await consultar(() => supabase.from('mesas').delete().eq('id', id).select('id'));
+  if (!resultado.error && (resultado.data ?? []).length === 0) {
+    return { data: null, error: 'No se pudo borrar la mesa. Actualiza la lista e inténtalo de nuevo.' };
+  }
+  return resultado;
 }

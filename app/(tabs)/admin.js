@@ -1,7 +1,7 @@
 // RF-08: acceso del administrador con Supabase Auth.
 // RF-10, RF-11, RF-12, RF-13: panel de gestión de mesas, horarios y reservas.
 import { useCallback, useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
@@ -84,6 +84,8 @@ function Panel({ seccion, setSeccion, onSalir }) {
 function MesasPanel() {
   const [estado, setEstado] = useState({ data: [], cargando: true, error: null });
   const [procesandoId, setProcesandoId] = useState(null);
+  const [aviso, setAviso] = useState(null);
+  const [mesaAEliminar, setMesaAEliminar] = useState(null);
   const solicitud = useRef(0);
   const montada = useRef(true);
 
@@ -102,28 +104,33 @@ function MesasPanel() {
 
   async function alternar(mesa) {
     setProcesandoId(mesa.id);
+    setAviso(null);
     const resultado = await cambiarEstadoMesa(mesa.id, !mesa.activa);
     setProcesandoId(null);
-    if (montada.current) { if (resultado.error) Alert.alert('No se pudo cambiar el estado', resultado.error); else await cargar(); }
+    if (!montada.current) return;
+    if (resultado.error) setAviso(resultado.error); else await cargar();
   }
 
+  // La confirmación es en pantalla (no Alert) para que el borrado dependa
+  // solo del estado de la vista y no de un diálogo nativo.
   function confirmarBorrado(mesa) {
-    Alert.alert('Borrar mesa', `¿Borrar «${mesa.nombre}»? Esta acción no se puede deshacer.`, [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Borrar', style: 'destructive', onPress: () => borrarMesa(mesa) },
-    ]);
+    setAviso(null);
+    setMesaAEliminar(mesa);
   }
 
   async function borrarMesa(mesa) {
+    setMesaAEliminar(null);
     setProcesandoId(mesa.id);
     const resultado = await borrar(mesa.id);
     setProcesandoId(null);
-    if (montada.current) { if (resultado.error) Alert.alert('No se pudo borrar', resultado.error); else await cargar(); }
+    if (!montada.current) return;
+    if (resultado.error) setAviso(resultado.error); else await cargar();
   }
 
   if (estado.cargando) return <EstadoPantalla cargando />;
   if (estado.error) return <EstadoPantalla mensaje={estado.error} onReintentar={cargar} />;
   return <View style={styles.contenido}>
+    {!!aviso && <Text accessibilityRole="alert" style={[styles.error, styles.avisoTop]}>{aviso}</Text>}
     <FlatList data={estado.data ?? []} keyExtractor={(m) => m.id} contentContainerStyle={styles.lista}
       onRefresh={cargar} refreshing={estado.cargando}
       ListEmptyComponent={<EstadoPantalla mensaje="No hay mesas registradas." />}
@@ -134,6 +141,24 @@ function MesasPanel() {
       style={styles.fab}>
       <Ionicons name="add" size={32} color={colors.blanco} />
     </Pressable>
+    <Modal transparent visible={!!mesaAEliminar} animationType="fade" onRequestClose={() => setMesaAEliminar(null)}>
+      <View style={styles.modalFondo}>
+        <View style={styles.modalCaja}>
+          <Text style={styles.modalTitulo}>Borrar mesa</Text>
+          <Text style={styles.modalTexto}>¿Borrar «{mesaAEliminar?.nombre}»? Esta acción no se puede deshacer.</Text>
+          <View style={styles.modalAcciones}>
+            <Pressable accessibilityRole="button" accessibilityLabel="Cancelar borrado" onPress={() => setMesaAEliminar(null)}
+              style={[styles.modalBoton, styles.modalCancelar]}>
+              <Text style={styles.modalCancelarTexto}>Cancelar</Text>
+            </Pressable>
+            <Pressable accessibilityRole="button" accessibilityLabel="Confirmar borrado" onPress={() => borrarMesa(mesaAEliminar)}
+              style={[styles.modalBoton, styles.modalBorrar]}>
+              <Text style={styles.modalBorrarTexto}>Borrar</Text>
+            </Pressable>
+          </View>
+        </View>
+      </View>
+    </Modal>
   </View>;
 }
 
@@ -285,4 +310,15 @@ const styles = StyleSheet.create({
   chipTexto: { color: colors.texto, fontSize: 14 },
   chipTextoElegido: { color: colors.blanco },
   fab: { position: 'absolute', right: 20, bottom: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primario, alignItems: 'center', justifyContent: 'center' },
+  avisoTop: { paddingHorizontal: 16, paddingTop: 12 },
+  modalFondo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 24 },
+  modalCaja: { width: '100%', maxWidth: 420, backgroundColor: colors.blanco, borderRadius: 16, padding: 20, gap: 12 },
+  modalTitulo: { fontSize: 18, fontWeight: '800', color: colors.texto },
+  modalTexto: { fontSize: 15, color: colors.texto },
+  modalAcciones: { flexDirection: 'row', gap: 10, marginTop: 4 },
+  modalBoton: { flex: 1, minHeight: 48, borderRadius: 12, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 12 },
+  modalCancelar: { backgroundColor: colors.fondo, borderWidth: 1, borderColor: colors.borde },
+  modalCancelarTexto: { color: colors.texto, fontSize: 16, fontWeight: '600' },
+  modalBorrar: { backgroundColor: colors.error },
+  modalBorrarTexto: { color: colors.blanco, fontSize: 16, fontWeight: '600' },
 });

@@ -99,3 +99,27 @@ descripciones y precios en la pantalla del cliente (CP-13).
 Las pruebas con inserción real y cambios de datos se deben realizar en el
 entorno de pruebas autorizado. No volver a ejecutar `schema.sql` sobre tablas
 existentes para preparar estos casos: su creación de tablas no es idempotente.
+
+---
+
+Fecha: 2026-11-06. Corrección de defectos detectados en la aceptación manual.
+
+## Defectos y correcciones
+
+| Caso | Defecto observado | Causa | Corrección | Estado |
+|---|---|---|---|---|
+| CP-20 | El botón de borrar mesa no borraba ninguna mesa (con o sin reservas) y por eso nunca aparecía el aviso «inactívala en su lugar». | La acción dependía por completo de `Alert.alert` (confirmación y mensaje de error), único flujo de la app que usaba un diálogo nativo para ejecutar una acción. El backend sí funcionaba (el `DELETE` elimina la fila y devuelve `23503` cuando hay reservas). | `MesasPanel` usa ahora una confirmación en pantalla (`Modal`) y muestra los errores en línea; `services/mesas.borrar` pide la fila borrada con `.select('id')` para no dar por exitoso un borrado de 0 filas. | Pendiente re-ejecutar CP-20 en celular. |
+| CP-23 | Con Expo Go no se podía girar la pantalla a horizontal. | `app.json` fijaba `"orientation": "portrait"`. | `app.json` usa `"orientation": "default"` (permite rotar; reiniciar Metro para que tome el cambio). | Pendiente re-ejecutar CP-23 en celular. |
+
+## Verificación automática tras la corrección
+
+| Comando | Resultado |
+|---|---|
+| `npm test` | **68 pruebas aprobadas, 7 suites.** Incluye `services/__tests__/mesas.test.js` (borrado con fila confirmada, conflicto `23503` y borrado de 0 filas). |
+| `npm run lint` | **Sin errores ni advertencias.** |
+
+Nota: el cambio en `app.json` contradice la fila de convenciones de
+`documentación/AGENTS.md`, que indica `"orientation": "portrait"`. Se prioriza
+CP-23 (rotación pedida). Actualizar esa línea la próxima vez que se toque el
+contrato.
+
