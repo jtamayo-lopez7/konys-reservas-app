@@ -29,6 +29,10 @@ export default function RootLayout() {
       <Stack.Screen name="panel/index" options={{ headerShown: false }} />
       <Stack.Screen name="panel/sede" options={{ headerShown: false }} />
       <Stack.Screen name="gestion/reservas" options={{ title: 'Reservas' }} />
+      {/* F3: reserva registrada en el local (08b) y roles y permisos (15, 15b, 15c). */}
+      <Stack.Screen name="gestion/reserva-form" options={{ title: 'Nueva reserva en el local' }} />
+      <Stack.Screen name="gestion/roles" options={{ title: 'Roles y permisos' }} />
+      <Stack.Screen name="gestion/rol-form" options={{ title: 'Rol' }} />
       <Stack.Screen name="gestion/mesas" options={{ title: 'Mesas' }} />
       <Stack.Screen name="gestion/horarios" options={{ title: 'Horarios' }} />
       <Stack.Screen name="gestion/mesa-form" options={{ title: 'Mesa' }} />

@@ -1,10 +1,11 @@
 // RF-12 (mockup 08): reservas de la sede gestionada con filtros por día y mesa. Las acciones
 // dependen del rol: cancelar exige `reservas.gestionar`; completar, `reservas.completar` o
 // `reservas.gestionar` (el mesero completa y no cancela, D-05). RN-06: no se borran.
-// Pendiente en F3: "+" para registrar reservas en el local (08b, D-06).
+// F3 (08b, D-06): con `reservas.gestionar` el "+" abre el formulario de reserva en el local.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useFocusEffect, useNavigation } from 'expo-router';
+import { router, useFocusEffect, useNavigation } from 'expo-router';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 import { listarTodas } from '../../services/mesas';
 import { cambiarEstado, listarReservas } from '../../services/reservas';
@@ -97,12 +98,16 @@ export default function ReservasScreen() {
           renderItem={({ item }) => <FilaReserva reserva={item} procesando={procesandoId === item.id}
             onCancelar={cancela ? () => transicionar(item, 'cancelada') : null}
             onCompletar={completa ? () => transicionar(item, 'completada') : null} />} />}
+    {cancela && <Pressable accessibilityRole="button" accessibilityLabel="Registrar reserva en el local"
+      onPress={() => router.push('/gestion/reserva-form')} style={styles.fab}>
+      <Ionicons name="add" size={32} color={colors.blanco} />
+    </Pressable>}
   </View>;
 }
 
 const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.fondo },
-  lista: { padding: 16, paddingBottom: 40 },
+  lista: { padding: 16, paddingBottom: 100 },
   filtros: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingTop: 12 },
   filtrosMesaContenedor: { flexGrow: 0 },
   filtrosMesa: { flexDirection: 'row', gap: 8, paddingHorizontal: 16, paddingVertical: 10 },
@@ -110,4 +115,5 @@ const styles = StyleSheet.create({
   chipElegido: { backgroundColor: colors.primario, borderColor: colors.primario },
   chipTexto: { color: colors.texto, fontSize: 14 },
   chipTextoElegido: { color: colors.blanco },
+  fab: { position: 'absolute', right: 20, bottom: 24, width: 58, height: 58, borderRadius: 29, backgroundColor: colors.primario, alignItems: 'center', justifyContent: 'center' },
 });

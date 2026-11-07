@@ -67,6 +67,7 @@ export default function PanelGeneralScreen() {
       <View style={styles.lista}>{sedes}</View>
       <Text style={styles.seccion}>Administración general</Text>
       {puede('sedes.gestionar') && <Boton titulo="Gestionar sedes" variante="secundario" onPress={() => router.push('/gestion/sedes')} />}
+      {puede('roles.gestionar') && <Boton titulo="Roles y permisos" variante="secundario" onPress={() => router.push('/gestion/roles')} />}
     </ScrollView>
   </SafeAreaView>;
 }

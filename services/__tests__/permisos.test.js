@@ -1,4 +1,4 @@
-import { esAdminGeneral, evaluarIngreso, primerNombre, puede, puedeGestionarPerfil, resumenPrivilegios, rolesAsignables, tarjetasPanel } from '../permisos';
+import { agruparPrivilegios, alternarPrivilegio, esAdminGeneral, evaluarIngreso, ordenarRoles, primerNombre, puede, puedeGestionarPerfil, resumenPrivilegios, resumenRol, rolesAsignables, tarjetasPanel } from '../permisos';
 
 // Matriz de 002_roles (D-05): 15 / 13 / 7 / 5 / 2 / 1.
 const TODOS = ['sedes.gestionar', 'roles.gestionar', 'usuarios.gestionar', 'mesas.ver', 'mesas.gestionar',
@@ -47,11 +47,16 @@ describe('U-06: acceso de personal', () => {
     ['rol oculto', perfil('mesero', { rol: { codigo: 'mesero', activo: false } }), 'deshabilitado'],
     ['sin sede', perfil('mesero', { sede: null }), 'sede asignada'],
     ['sin privilegios', perfil('mesero', { privilegios: [] }), 'no tiene permisos'],
-    ['solo privilegios sin pantalla', perfil('mesero', { privilegios: ['pagos.ver'] }), 'no tiene permisos'],
   ])('no deja entrar: %s', (_, p, texto) => {
     const r = evaluarIngreso(p);
     expect(r.destino).toBeUndefined();
     expect(r.error).toContain(texto);
+  });
+
+  it('un rol con permisos de secciones que aún no existen entra al panel', () => {
+    expect(evaluarIngreso(perfil('mesero', { privilegios: ['pagos.ver'] }))).toEqual({ destino: '/panel/sede' });
+    expect(evaluarIngreso(perfil('mesero', { privilegios: ['calificaciones.ver'] }))).toEqual({ destino: '/panel/sede' });
+    expect(tarjetasPanel(perfil('mesero', { privilegios: ['pagos.ver'] }))).toEqual([]);
   });
 
   it('suspensión pesa más que la clave temporal', () => {
@@ -124,5 +129,62 @@ describe('U-06: cuentas de personal (F3C)', () => {
   it('resumen de privilegios para 14b', () => {
     expect(resumenPrivilegios(roles[2])).toBe('Ver mesas · Ver reservas');
     expect(resumenPrivilegios(null)).toBe('');
+  });
+});
+
+describe('U-07: roles y permisos (F3, 15/15b/15c)', () => {
+  const catalogo = [
+    { clave: 'mesas.ver', descripcion: 'Ver mesas', alcance: 'sede' },
+    { clave: 'mesas.gestionar', descripcion: 'Crear, editar o eliminar mesas', alcance: 'sede' },
+    { clave: 'reservas.ver', descripcion: 'Ver reservas', alcance: 'sede' },
+    { clave: 'sedes.gestionar', descripcion: 'Gestionar sedes (global)', alcance: 'global' },
+    { clave: 'roles.gestionar', descripcion: 'Gestionar roles y permisos (global)', alcance: 'global' },
+    { clave: 'calificaciones.ver', descripcion: 'Ver calificaciones de la sede', alcance: 'sede' },
+  ];
+
+  it('agrupa con los títulos y el orden del mockup 15b', () => {
+    const grupos = agruparPrivilegios(catalogo);
+    expect(grupos.map((g) => g.titulo)).toEqual(['Mesas', 'Reservas', 'Calificaciones', 'Administración general']);
+    expect(grupos[3].soloGlobal).toBe(true);
+  });
+
+  it('deja los privilegios desconocidos en Otros', () => {
+    const grupos = agruparPrivilegios([...catalogo, { clave: 'nuevo.permiso', descripcion: 'Nuevo', alcance: 'sede' }]);
+    expect(grupos.at(-1)).toMatchObject({ titulo: 'Otros', soloGlobal: false });
+  });
+
+  it('ordena los roles del sistema y deja los personalizados al final', () => {
+    const roles = [
+      { codigo: 'cajero', nombre: 'Cajero', es_sistema: false },
+      { codigo: 'mesero', nombre: 'Mesero', es_sistema: true },
+      { codigo: 'admin_general', nombre: 'Administrador general', es_sistema: true },
+      { codigo: 'admin_sede', nombre: 'Administrador de sede', es_sistema: true },
+    ];
+    expect(ordenarRoles(roles).map((r) => r.codigo)).toEqual(['admin_general', 'admin_sede', 'mesero', 'cajero']);
+  });
+
+  it('resume la tarjeta de 15', () => {
+    expect(resumenRol({ es_sistema: true, alcance: 'sede', activo: true, privilegios: [1, 2, 3] }))
+      .toBe('Su sede · 3 permisos · del sistema');
+    expect(resumenRol({ es_sistema: true, alcance: 'global', activo: true, privilegios: [1] }))
+      .toBe('Todas las sedes · 1 permiso · del sistema');
+    expect(resumenRol({ es_sistema: false, alcance: 'sede', activo: false, privilegios: [1] }))
+      .toBe('Personalizado · 1 permiso · oculto');
+  });
+
+  it('completar, liberar y pagos agregan la lectura de reservas', () => {
+    expect(alternarPrivilegio([], 'reservas.completar')).toEqual(['reservas.completar', 'reservas.ver']);
+    expect(alternarPrivilegio(['reservas.ver'], 'reservas.liberar')).toEqual(['reservas.ver', 'reservas.liberar']);
+    expect(alternarPrivilegio([], 'pagos.ver')).toEqual(['pagos.ver', 'reservas.ver']);
+    expect(alternarPrivilegio([], 'pagos.gestionar')).toEqual(['pagos.gestionar', 'pagos.ver', 'reservas.ver']);
+  });
+
+  it('quitar una dependencia quita también sus dependientes', () => {
+    expect(alternarPrivilegio(['reservas.ver', 'reservas.completar', 'reservas.liberar'], 'reservas.ver'))
+      .toEqual([]);
+    expect(alternarPrivilegio(['pagos.ver', 'pagos.gestionar', 'reservas.ver'], 'pagos.ver'))
+      .toEqual(['reservas.ver']);
+    expect(alternarPrivilegio(['reservas.ver', 'reservas.completar'], 'reservas.completar'))
+      .toEqual(['reservas.ver']);
   });
 });

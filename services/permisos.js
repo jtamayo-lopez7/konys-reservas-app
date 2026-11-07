@@ -53,7 +53,11 @@ export function evaluarIngreso(perfil) {
   if (perfil.debe_cambiar_clave) return { destino: '/cambiar-clave' };
   if (perfil.rol.codigo === 'admin_general') return { destino: '/panel' };
   if (!perfil.sede) return { error: 'Tu cuenta no tiene una sede asignada. Habla con el administrador.' };
-  if (!tarjetasPanel(perfil).length) return { error: 'Tu rol no tiene permisos asignados. Habla con el administrador.' };
+  // El rol puede tener permisos de secciones que aún no existen (pagos F4, calificaciones F5).
+  // En ese caso entra al panel, que explica que todavía no hay tarjetas disponibles.
+  if (!(perfil.privilegios ?? []).length) {
+    return { error: 'Tu rol no tiene permisos asignados. Habla con el administrador.' };
+  }
   return { destino: '/panel/sede' };
 }
 
@@ -87,6 +91,83 @@ export function rolesAsignables(perfil, roles, personalSede = [], editandoId = n
 // "Mesero puede: Ver mesas · Ver reservas · …" (14b).
 export function resumenPrivilegios(rol) {
   return (rol?.privilegios ?? []).map((p) => p.descripcion).join(' · ');
+}
+
+// F3 (15): orden del mockup: los 6 roles del sistema en su orden de semilla y después los
+// personalizados por nombre.
+const ORDEN_SISTEMA = ['admin_general', 'admin_sede', 'recepcion', 'mesero', 'jefe_cocina', 'cocina'];
+
+export function ordenarRoles(roles = []) {
+  const posicion = (rol) => {
+    const indice = ORDEN_SISTEMA.indexOf(rol.codigo);
+    return indice === -1 ? ORDEN_SISTEMA.length : indice;
+  };
+  return [...roles].sort((a, b) => {
+    if (a.es_sistema !== b.es_sistema) return a.es_sistema ? -1 : 1;
+    return posicion(a) - posicion(b) || String(a.nombre).localeCompare(String(b.nombre), 'es');
+  });
+}
+
+// Línea de la tarjeta de 15: "Su sede · 13 permisos · del sistema" o
+// "Personalizado · 2 permisos · oculto".
+export function resumenRol(rol) {
+  const total = rol?.privilegios?.length ?? 0;
+  const permisos = `${total} permiso${total === 1 ? '' : 's'}`;
+  const tipo = rol?.es_sistema
+    ? (rol.alcance === 'global' ? 'Todas las sedes' : 'Su sede')
+    : 'Personalizado';
+  return [tipo, permisos, rol?.es_sistema && 'del sistema', !rol?.activo && 'oculto']
+    .filter(Boolean).join(' · ');
+}
+
+// F3 (15b/15c): agrupa el catálogo con los títulos del mockup, en su orden. No filtra por
+// alcance: la pantalla muestra los globales deshabilitados cuando el rol es de sede.
+const GRUPOS_PRIVILEGIOS = [
+  { titulo: 'Mesas', claves: ['mesas.ver', 'mesas.gestionar'] },
+  { titulo: 'Horarios', claves: ['horarios.gestionar'] },
+  { titulo: 'Reservas', claves: ['reservas.ver', 'reservas.gestionar', 'reservas.completar', 'reservas.liberar'] },
+  { titulo: 'Carta', claves: ['carta.gestionar', 'carta.disponibilidad'] },
+  { titulo: 'Pagos', claves: ['pagos.ver', 'pagos.gestionar'] },
+  { titulo: 'Calificaciones', claves: ['calificaciones.ver'] },
+  { titulo: 'Personal', claves: ['usuarios.gestionar'] },
+  { titulo: 'Administración general', claves: ['sedes.gestionar', 'roles.gestionar'], soloGlobal: true },
+];
+
+// F3 (15b/15c): dependencias de lectura. Completar o liberar una reserva exige poder verla;
+// los permisos de pago se muestran en la tarjeta de Reservas. Así el rol nunca queda con
+// privilegios que la app no puede usar (por ejemplo, solo `reservas.completar`).
+const DEPENDENCIAS = {
+  'reservas.completar': ['reservas.ver'],
+  'reservas.liberar': ['reservas.ver'],
+  'pagos.ver': ['reservas.ver'],
+  'pagos.gestionar': ['pagos.ver', 'reservas.ver'],
+};
+const DEPENDIENTES = {
+  'reservas.ver': ['reservas.completar', 'reservas.liberar', 'pagos.ver', 'pagos.gestionar'],
+  'pagos.ver': ['pagos.gestionar'],
+};
+
+export function alternarPrivilegio(seleccion = [], clave) {
+  if (seleccion.includes(clave)) {
+    const dependientes = DEPENDIENTES[clave] ?? [];
+    return seleccion.filter((c) => c !== clave && !dependientes.includes(c));
+  }
+  return [...new Set([...seleccion, clave, ...(DEPENDENCIAS[clave] ?? [])])];
+}
+
+export function agruparPrivilegios(privilegios = []) {
+  const usadas = new Set();
+  const grupos = GRUPOS_PRIVILEGIOS.map((grupo) => {
+    // Respeta el orden del mockup, no el alfabético del catálogo.
+    const items = grupo.claves
+      .map((clave) => privilegios.find((p) => p.clave === clave))
+      .filter(Boolean);
+    items.forEach((p) => usadas.add(p.clave));
+    return { titulo: grupo.titulo, soloGlobal: Boolean(grupo.soloGlobal), items };
+  }).filter((grupo) => grupo.items.length);
+  const otros = privilegios.filter((p) => !usadas.has(p.clave));
+  if (otros.length) grupos.push({ titulo: 'Otros', soloGlobal: false, items: otros });
+  return grupos;
 }
 
 // "Hola, Jorge": solo el primer nombre.

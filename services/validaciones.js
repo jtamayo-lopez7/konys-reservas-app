@@ -95,3 +95,20 @@ export function validarUsuario(form, { nuevo = true } = {}) {
   if (!form.rol_id) errores.rol_id = 'Elige un rol.';
   return { valido: Object.keys(errores).length === 0, errores };
 }
+
+// F3 (15b y 15c): rol personalizado. El código es el del CHECK de roles.codigo y solo se pide
+// al crear; el alcance no se puede cambiar después (proteger_roles).
+export function validarRol(form, { nuevo = true } = {}) {
+  const errores = {};
+  if (nuevo) {
+    const codigo = String(form.codigo ?? '').trim();
+    if (!/^[a-z][a-z0-9_]{2,29}$/.test(codigo)) {
+      errores.codigo = 'Usa de 3 a 30 caracteres: minúsculas, números o guion bajo, y empieza con letra.';
+    }
+  }
+  const nombre = String(form.nombre ?? '').trim();
+  if (nombre.length < 2 || nombre.length > 60) errores.nombre = 'Escribe un nombre de 2 a 60 caracteres.';
+  if (String(form.descripcion ?? '').trim().length > 200) errores.descripcion = 'Máximo 200 caracteres.';
+  if (!['global', 'sede'].includes(form.alcance)) errores.alcance = 'Elige un alcance válido.';
+  return { valido: Object.keys(errores).length === 0, errores };
+}

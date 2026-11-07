@@ -1,4 +1,4 @@
-import { validarAcceso, validarClaveNueva, validarUsuario, validarMesa, validarPlato, validarHorario, validarReserva } from '../validaciones';
+import { validarAcceso, validarClaveNueva, validarUsuario, validarRol, validarMesa, validarPlato, validarHorario, validarReserva } from '../validaciones';
 
 const base = { cliente_nombre: 'Laura Gómez', num_personas: '4', cliente_contacto: '', acepta_tratamiento_datos: true };
 describe('U-02: formulario de reserva', () => {
@@ -95,5 +95,24 @@ describe('U-02: cuenta de personal (F3C)', () => {
   });
   it('al editar no pide correo ni clave', () => {
     expect(validarUsuario({ nombre: 'Laura', rol_id: 'r2' }, { nuevo: false }).valido).toBe(true);
+  });
+});
+
+describe('U-07: rol (F3, 15b/15c)', () => {
+  const base = { codigo: 'cajero', nombre: 'Cajero', descripcion: 'Cobra y confirma pagos', alcance: 'sede' };
+  it('acepta un rol de sede válido y sus límites', () => {
+    expect(validarRol(base).valido).toBe(true);
+    expect(validarRol({ ...base, codigo: 'a'.repeat(30), nombre: 'ab', descripcion: 'd'.repeat(200) }).valido).toBe(true);
+  });
+  it.each(['', 'Ab', '1cajero', 'cajero!', 'ab', 'a'.repeat(31)])('rechaza el código %j al crear', (codigo) => {
+    expect(validarRol({ ...base, codigo }).errores.codigo).toBeDefined();
+  });
+  it('al editar no pide el código', () => {
+    expect(validarRol({ nombre: 'Cajero', alcance: 'sede' }, { nuevo: false }).valido).toBe(true);
+  });
+  it('rechaza nombre, descripción y alcance inválidos', () => {
+    expect(validarRol({ ...base, nombre: 'a' }).errores.nombre).toBeDefined();
+    expect(validarRol({ ...base, descripcion: 'd'.repeat(201) }).errores.descripcion).toBeDefined();
+    expect(validarRol({ ...base, alcance: 'otro' }).errores.alcance).toBeDefined();
   });
 });

@@ -38,10 +38,14 @@ export default function PanelSedeScreen() {
         <Ionicons name="swap-horizontal-outline" size={18} color={colors.primario} />
         <Text style={styles.cambiarTexto}>Cambiar sede</Text>
       </Pressable>}
-      <View style={styles.lista}>
-        {tarjetas.map((t) => <TarjetaPanel key={t.clave} titulo={t.titulo} detalle={t.detalle} icono={t.icono}
-          onPress={() => router.push(t.ruta)} />)}
-      </View>
+      {tarjetas.length
+        ? <View style={styles.lista}>
+          {tarjetas.map((t) => <TarjetaPanel key={t.clave} titulo={t.titulo} detalle={t.detalle} icono={t.icono}
+            onPress={() => router.push(t.ruta)} />)}
+        </View>
+        : <View style={styles.nota}>
+          <Text style={styles.secundario}>Tu rol tiene {perfil?.privilegios?.length ?? 0} permiso(s), pero ninguna sección está disponible todavía. Pagos y calificaciones llegan en F4 y F5; si el permiso es de reservas, debe incluir «Ver reservas».</Text>
+        </View>}
     </ScrollView>
   </SafeAreaView>;
 }
@@ -52,4 +56,6 @@ const styles = StyleSheet.create({
   cambiar: { flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', minHeight: 44 },
   cambiarTexto: { color: colors.primario, fontSize: 15, fontWeight: '600' },
   lista: { gap: 12 },
+  nota: { padding: 16, backgroundColor: colors.blanco, borderWidth: 1, borderColor: colors.borde, borderRadius: 14 },
+  secundario: { color: colors.secundario, fontSize: 14, lineHeight: 21 },
 });
