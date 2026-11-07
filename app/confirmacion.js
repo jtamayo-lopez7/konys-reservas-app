@@ -13,7 +13,7 @@ export default function ConfirmacionScreen() {
   const { reserva, setReserva } = useReservaConfirmada();
   const volver = useCallback(() => {
     setReserva(null);
-    router.replace('/');
+    router.replace('/inicio');
   }, [setReserva]);
   useFocusEffect(useCallback(() => {
     const evento = BackHandler.addEventListener('hardwareBackPress', () => { volver(); return true; });
@@ -21,6 +21,7 @@ export default function ConfirmacionScreen() {
   }, [volver]));
 
   const filas = reserva ? [
+    ...(reserva.sede_nombre ? [['Sede', reserva.sede_nombre]] : []),
     ['Mesa', reserva.mesa_nombre],
     ['Zona', ZONAS[reserva.zona]],
     ['Fecha', leerFecha(reserva.fecha).toLocaleDateString('es-CO', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })],

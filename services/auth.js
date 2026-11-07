@@ -1,41 +1,51 @@
-// RF-08: acceso del administrador con Supabase Auth (H-03, no un PIN en código).
+// RF-08 ampliado en F3: acceso del personal con correo y clave (05a) y cambio obligatorio de
+// la clave temporal (05e, D-07). El perfil, el rol, la sede y los privilegios los entrega la
+// base con mi_sesion(); la autorización real la hace RLS (002_roles), no esta capa.
 import { supabase } from './supabase';
 import { consultar } from './consultas';
-import { traducir } from './errores';
+import { evaluarIngreso } from './permisos';
 
-// El rol se decide en el servidor: es_admin() lee app_metadata.rol del JWT y
-// sin él RLS devuelve listas vacías y rechaza las escrituras con 42501. Aquí
-// solo evitamos abrir un panel inútil; la seguridad sigue siendo de RLS.
-function esAdmin(usuario) {
-  return usuario?.app_metadata?.rol === 'admin';
+function miSesion() {
+  return consultar(() => supabase.rpc('mi_sesion'));
 }
 
-function avisoSinRol(email) {
-  return `${email} inició sesión, pero ese usuario no tiene el rol «admin» en Supabase, así que RLS le bloquea los datos. Ejecuta el UPDATE de «Preparación de la prueba (etapa 4)» en docs/pruebas.md (SQL Editor) y vuelve a ingresar.`;
+// Al abrir la app: la sesión persiste en AsyncStorage (services/supabase.js). Sin sesión,
+// data es null. Se relee el perfil siempre de la base para no usar un rol viejo.
+export async function cargarSesion() {
+  const guardada = await consultar(() => supabase.auth.getSession());
+  if (guardada.error) return guardada;
+  if (!guardada.data?.session) return { data: null, error: null };
+  return miSesion();
 }
 
-export function ingresar(clave) {
-  const email = process.env.EXPO_PUBLIC_ADMIN_EMAIL;
-  if (!email) return Promise.resolve({ data: null, error: 'Falta configurar EXPO_PUBLIC_ADMIN_EMAIL en .env.' });
-  return supabase.auth.signInWithPassword({ email, password: clave })
-    .then(({ data, error }) => {
-      if (error) return { data: null, error: traducir(error) };
-      if (!esAdmin(data?.user)) return { data: null, error: avisoSinRol(email) };
-      return { data: true, error: null };
-    });
+// Si la cuenta no puede entrar (sin perfil, suspendida, rol oculto, sin permisos), se cierra la
+// sesión de inmediato y se devuelve el motivo.
+export async function ingresar(correo, clave) {
+  const acceso = await consultar(() => supabase.auth.signInWithPassword({
+    email: String(correo).trim().toLowerCase(), password: clave,
+  }));
+  if (acceso.error) return acceso;
+  const perfil = await miSesion();
+  const motivo = perfil.error ?? evaluarIngreso(perfil.data).error;
+  if (motivo) {
+    await cerrarSesion();
+    return { data: null, error: motivo };
+  }
+  return perfil;
 }
 
+// D-07: cambia la clave en Auth y luego apaga la marca del perfil; devuelve el perfil al día.
+export async function cambiarClave(nueva) {
+  const cambio = await consultar(() => supabase.auth.updateUser({ password: nueva }));
+  if (cambio.error) return cambio;
+  const marca = await consultar(() => supabase.rpc('marcar_clave_cambiada'));
+  if (marca.error) return marca;
+  return miSesion();
+}
+
+// Solo en este dispositivo. Con el alcance por defecto (global), salir en un celular revocaba
+// las sesiones de la misma cuenta en los demás; esos celulares seguían leyendo datos con su
+// token, pero las Edge Functions los rechazaban por "Session not found" (2026-11-06).
 export function cerrarSesion() {
-  return consultar(() => supabase.auth.signOut());
-}
-
-// La sesión persiste en AsyncStorage (services/supabase.js); getSession la lee.
-// Se exige el rol también aquí: el JWT guardado puede ser anterior al UPDATE del
-// rol, y en ese caso RLS sigue bloqueando; conviene avisar y pedir volver a entrar.
-export function sesion() {
-  return consultar(() => supabase.auth.getSession()).then((r) => {
-    if (r.error || !r.data?.session) return { ...r, data: null };
-    if (!esAdmin(r.data.session.user)) return { data: null, error: avisoSinRol(r.data.session.user?.email) };
-    return { ...r, data: r.data.session };
-  });
+  return consultar(() => supabase.auth.signOut({ scope: 'local' }));
 }

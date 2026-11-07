@@ -14,7 +14,7 @@ let insertar;
 beforeEach(() => {
   jest.clearAllMocks();
   jest.useFakeTimers({ now: new Date(2026, 9, 29, 10) });
-  obtenerActiva.mockResolvedValue({ data: { id: 'mesa-1', nombre: 'Mesa 1', zona: 'salon', capacidad: 4 }, error: null });
+  obtenerActiva.mockResolvedValue({ data: { id: 'mesa-1', sede_id: 'sede-1', nombre: 'Mesa 1', zona: 'salon', capacidad: 4 }, error: null });
   listar.mockResolvedValue({ data: [horario], error: null });
   supabase.rpc.mockResolvedValue({ data: [], error: null });
   insertar = jest.fn().mockResolvedValue({ data: null, error: null });
@@ -30,6 +30,11 @@ describe('creación segura de reservas', () => {
     expect(insertar).toHaveBeenCalledWith(expect.objectContaining({ cliente_nombre: 'Laura Gómez', num_personas: 4, cliente_contacto: null, hora_fin: '20:00' }));
     expect(resultado.error).toBeNull();
     expect(resultado.data.mesa_nombre).toBe('Mesa 1');
+  });
+  it('usa los horarios de la sede de la mesa y no envía sede_id (RN-10)', async () => {
+    await crear('mesa-1', '2026-10-29', '19:00', form);
+    expect(listar).toHaveBeenCalledWith('sede-1');
+    expect(insertar.mock.calls[0][0]).not.toHaveProperty('sede_id');
   });
   it('no inserta si otra persona ocupó una parte del horario', async () => {
     supabase.rpc.mockResolvedValue({ data: [{ hora_inicio: '19:30:00', hora_fin: '20:30:00' }], error: null });

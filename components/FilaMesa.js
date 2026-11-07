@@ -5,7 +5,8 @@ import { colors } from '../constants/colors';
 import { ZONAS } from '../constants/dominio';
 import Foto from './Foto';
 
-export default function FilaMesa({ mesa, procesando, onCambiarEstado, onEditar, onBorrar }) {
+// soloLectura (F3, `mesas.ver` sin `mesas.gestionar`): sin interruptor ni acciones.
+export default function FilaMesa({ mesa, procesando, soloLectura = false, onCambiarEstado, onEditar, onBorrar }) {
   return <View style={styles.fila}>
     <Foto uri={mesa.foto_url} nombre={mesa.nombre} />
     <View style={styles.contenido}>
@@ -13,6 +14,7 @@ export default function FilaMesa({ mesa, procesando, onCambiarEstado, onEditar, 
       <Text style={styles.detalle}>{ZONAS[mesa.zona]} · hasta {mesa.capacidad} personas</Text>
       <Text style={styles.estado}>{mesa.activa ? 'Activa' : 'Inactiva'}</Text>
     </View>
+    {!soloLectura && <>
     <Switch accessibilityLabel={`Mesa ${mesa.nombre} activa`} value={mesa.activa} disabled={procesando}
       onValueChange={onCambiarEstado} trackColor={{ true: colors.primario, false: colors.ocupado }} />
     <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${mesa.nombre}`} disabled={procesando}
@@ -23,6 +25,7 @@ export default function FilaMesa({ mesa, procesando, onCambiarEstado, onEditar, 
       onPress={onBorrar} style={styles.accion} hitSlop={8}>
       <Ionicons name="trash-outline" size={22} color={colors.error} />
     </Pressable>
+    </>}
   </View>;
 }
 

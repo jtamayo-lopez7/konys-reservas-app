@@ -10,6 +10,7 @@ import { crear, slotsOcupados } from '../../services/reservas';
 import { generarFechas, generarSlots, leerFecha } from '../../services/slots';
 import { validarReserva } from '../../services/validaciones';
 import { useReservaConfirmada } from '../../hooks/ReservaConfirmada';
+import { useSede } from '../../hooks/SedeSeleccionada';
 import Boton from '../../components/Boton';
 import EstadoPantalla from '../../components/EstadoPantalla';
 import SelectorFecha from '../../components/SelectorFecha';
@@ -20,6 +21,7 @@ const formularioInicial = { cliente_nombre: '', num_personas: '1', cliente_conta
 export default function ReservarScreen() {
   const { mesaId } = useLocalSearchParams();
   const { setReserva } = useReservaConfirmada();
+  const { sede } = useSede();
   const [base, setBase] = useState({ mesa: null, horarios: [], cargando: true, error: null });
   const [fecha, setFecha] = useState(null);
   const [disponibilidad, setDisponibilidad] = useState({ clave: null, data: [], error: null });
@@ -44,7 +46,9 @@ export default function ReservarScreen() {
     const id = ++solicitudBase.current;
     setBase({ mesa: null, horarios: [], cargando: true, error: null });
     setHora(null);
-    const [mesa, horarios] = await Promise.all([obtenerActiva(mesaId), listar()]);
+    // RN-10: las jornadas son las de la sede a la que pertenece la mesa.
+    const mesa = await obtenerActiva(mesaId);
+    const horarios = mesa.data ? await listar(mesa.data.sede_id) : { data: [], error: null };
     if (id !== solicitudBase.current) return;
     const error = mesa.error || horarios.error;
     setBase({ mesa: mesa.data, horarios: horarios.data ?? [], cargando: false, error });
@@ -94,7 +98,7 @@ export default function ReservarScreen() {
         setHora(null);
         await cargarBase();
       } else {
-        setReserva(resultado.data);
+        setReserva({ ...resultado.data, sede_nombre: sede?.nombre ?? null });
         // La confirmación reemplaza toda la pila para impedir volver al formulario enviado.
         router.dismissAll();
         router.replace('/confirmacion');

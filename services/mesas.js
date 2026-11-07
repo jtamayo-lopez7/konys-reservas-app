@@ -1,18 +1,20 @@
-// RF-01, RF-02: lectura pública de mesas activas.
+// RF-01, RF-02: lectura pública de mesas activas de la sede elegida (RN-10).
 // RF-09, RF-10, RF-13: CRUD administrativo de mesas (requiere sesión de admin).
 import { supabase } from './supabase';
 import { consultar } from './consultas';
 
-const columnas = 'id,nombre,zona,capacidad,activa,foto_url';
+const columnas = 'id,sede_id,nombre,zona,capacidad,activa,foto_url';
+const columnasPublicas = 'id,sede_id,nombre,zona,capacidad,foto_url';
 
-export function listarActivas() {
+export function listarActivas(sedeId) {
   return consultar(() => supabase.from('mesas')
-    .select('id,nombre,zona,capacidad,foto_url').eq('activa', true).order('nombre'));
+    .select(columnasPublicas).eq('sede_id', sedeId).eq('activa', true).order('nombre'));
 }
 
+// Trae sede_id para que la reserva use los horarios de la sede de la mesa.
 export function obtenerActiva(id) {
   return consultar(() => supabase.from('mesas')
-    .select('id,nombre,zona,capacidad,foto_url').eq('id', id).eq('activa', true).maybeSingle());
+    .select(columnasPublicas).eq('id', id).eq('activa', true).maybeSingle());
 }
 
 // Para editar desde el admin: no filtra por activa (a diferencia de obtenerActiva).
@@ -20,10 +22,12 @@ export function obtener(id) {
   return consultar(() => supabase.from('mesas').select(columnas).eq('id', id).maybeSingle());
 }
 
-export function listarTodas() {
-  return consultar(() => supabase.from('mesas').select(columnas).order('activa', { ascending: false }).order('nombre'));
+export function listarTodas(sedeId) {
+  return consultar(() => supabase.from('mesas').select(columnas).eq('sede_id', sedeId)
+    .order('activa', { ascending: false }).order('nombre'));
 }
 
+// La mesa nueva pertenece a la sede indicada (mesa.sede_id).
 export function crear(mesa) {
   // Se devuelve la fila porque el admin sí puede leer mesas (a diferencia del cliente).
   return consultar(() => supabase.from('mesas')

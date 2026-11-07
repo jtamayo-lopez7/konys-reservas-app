@@ -5,6 +5,7 @@ import { colors } from '../../constants/colors';
 import { ZONAS } from '../../constants/dominio';
 import { crear, obtener, actualizar } from '../../services/mesas';
 import { validarMesa } from '../../services/validaciones';
+import { useGuardiaPersonal, useSesionPersonal } from '../../hooks/SesionPersonal';
 import Boton from '../../components/Boton';
 import EstadoPantalla from '../../components/EstadoPantalla';
 
@@ -13,6 +14,8 @@ const formularioInicial = { nombre: '', zona: 'salon', capacidad: '4', foto_url:
 export default function MesaFormScreen() {
   const { mesaId } = useLocalSearchParams();
   const esEdicion = Boolean(mesaId);
+  // F3: la mesa nueva queda en la sede que gestiona el personal (requiere mesas.gestionar).
+  const { sedeGestion: sede } = useSesionPersonal();
   const [base, setBase] = useState({ cargando: esEdicion, error: null, mesa: null });
   const [form, setForm] = useState(formularioInicial);
   const [tocado, setTocado] = useState(false);
@@ -52,7 +55,8 @@ export default function MesaFormScreen() {
     setAviso(null);
     try {
       const datos = { nombre: form.nombre.trim(), zona: form.zona, capacidad: form.capacidad, foto_url: form.foto_url.trim() || null };
-      const resultado = esEdicion ? await actualizar(mesaId, datos) : await crear(datos);
+      // RN-10: la mesa nueva queda en la sede que se está gestionando.
+      const resultado = esEdicion ? await actualizar(mesaId, datos) : await crear({ ...datos, sede_id: sede.id });
       if (!montada.current) return;
       if (resultado.error) setAviso(resultado.error);
       else router.back();
@@ -62,8 +66,11 @@ export default function MesaFormScreen() {
     }
   }
 
+  const guardia = useGuardiaPersonal(['mesas.gestionar']);
+  if (guardia) return guardia;
   if (base.cargando) return <EstadoPantalla cargando />;
   if (base.error) return <EstadoPantalla mensaje={base.error} onReintentar={cargar} />;
+
 
   // Devuelve null (no false) para no dejar un booleano como hijo de <View>.
   const mostrarError = (campo) => (tocado || form[campo]) && validacion.errores[campo]
@@ -71,6 +78,7 @@ export default function MesaFormScreen() {
 
   return <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={90}>
     <ScrollView contentContainerStyle={styles.contenido} keyboardShouldPersistTaps="handled">
+      {!esEdicion && <Text style={styles.etiqueta}>Sede: {sede.nombre}</Text>}
       {aviso && <Text accessibilityRole="alert" style={styles.error}>{aviso}</Text>}
       <View style={styles.grupo}>
         <Text style={styles.etiqueta}>Nombre</Text>

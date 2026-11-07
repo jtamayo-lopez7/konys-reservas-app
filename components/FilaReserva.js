@@ -16,15 +16,16 @@ export default function FilaReserva({ reserva, procesando, onCancelar, onComplet
       <Text style={styles.detalle}>{reserva.num_personas} personas{reserva.cliente_contacto ? ` · ${reserva.cliente_contacto}` : ''}</Text>
       <Text style={[styles.estado, { color: tono[reserva.estado] ?? colors.texto }]}>{ESTADOS[reserva.estado]}</Text>
     </View>
-    {confirmada && <View style={styles.acciones}>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Cancelar reserva de ${reserva.cliente_nombre}`} disabled={procesando}
+    {/* F3: cada acción aparece solo si el rol la tiene (se pasa su función). */}
+    {confirmada && (onCancelar || onCompletar) && <View style={styles.acciones}>
+      {!!onCancelar && <Pressable accessibilityRole="button" accessibilityLabel={`Cancelar reserva de ${reserva.cliente_nombre}`} disabled={procesando}
         onPress={onCancelar} style={[styles.accion, styles.cancelar]} hitSlop={8}>
         <Text style={styles.textoAccion}>Cancelar</Text>
-      </Pressable>
-      <Pressable accessibilityRole="button" accessibilityLabel={`Completar reserva de ${reserva.cliente_nombre}`} disabled={procesando}
+      </Pressable>}
+      {!!onCompletar && <Pressable accessibilityRole="button" accessibilityLabel={`Completar reserva de ${reserva.cliente_nombre}`} disabled={procesando}
         onPress={onCompletar} style={styles.accion} hitSlop={8}>
         <Text style={[styles.textoAccion, styles.claro]}>Completar</Text>
-      </Pressable>
+      </Pressable>}
     </View>}
   </View>;
 }

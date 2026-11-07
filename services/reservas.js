@@ -12,10 +12,13 @@ export function slotsOcupados(mesaId, fecha) {
   return consultar(() => supabase.rpc('slots_ocupados', { p_mesa_id: mesaId, p_fecha: fecha }));
 }
 
+// La sede la decide el servidor a partir de la mesa (validar_reserva, RN-10); la app no la envía.
 export async function crear(mesaId, fecha, horaInicio, form) {
-  const [mesa, horarios] = await Promise.all([obtenerActiva(mesaId), listar()]);
-  if (mesa.error || horarios.error) return { data: null, error: mesa.error || horarios.error };
+  const mesa = await obtenerActiva(mesaId);
+  if (mesa.error) return { data: null, error: mesa.error };
   if (!mesa.data) return { data: null, error: traducir({ message: 'KONYS_MESA_NO_DISPONIBLE' }) };
+  const horarios = await listar(mesa.data.sede_id);
+  if (horarios.error) return { data: null, error: horarios.error };
   const validacion = validarReserva(form, mesa.data.capacidad);
   if (!validacion.valido) return { data: null, error: Object.values(validacion.errores)[0] };
   const ahora = new Date();
@@ -44,10 +47,11 @@ export async function crear(mesaId, fecha, horaInicio, form) {
   };
 }
 
-// RF-12: el admin sí lee reservas; se trae el nombre de la mesa con un join.
-export function listarReservas({ fecha = null, manana = false, mesaId = null } = {}) {
+// RF-12: el admin sí lee reservas de la sede; se trae el nombre de la mesa con un join.
+export function listarReservas({ sedeId, fecha = null, manana = false, mesaId = null } = {}) {
   let consulta = supabase.from('reservas')
     .select('id,mesa_id,mesa:mesas(nombre),cliente_nombre,cliente_contacto,num_personas,fecha,hora_inicio,hora_fin,estado')
+    .eq('sede_id', sedeId)
     .order('fecha', { ascending: !manana }).order('hora_inicio');
   if (fecha) consulta = consulta.eq('fecha', fecha);
   if (mesaId) consulta = consulta.eq('mesa_id', mesaId);

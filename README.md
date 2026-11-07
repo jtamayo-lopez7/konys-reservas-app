@@ -24,10 +24,13 @@ horarios, reservas y carta. Construida con **React Native + Expo SDK 58** en **J
   en la URL ni persistencia).
 - **Carta:** filtros por categoría y precios en COP, con platos disponibles.
 
-### Módulo administrador
+### Módulo de personal (F3)
 
-- Acceso con **Supabase Auth** (correo tomado de `EXPO_PUBLIC_ADMIN_EMAIL` y un campo "Clave").
-  El usuario debe tener `app_metadata.rol = "admin"`.
+- Acceso por la **rueda de ajustes** de la bienvenida, con correo y clave (Supabase Auth). El
+  perfil, el rol, la sede y los privilegios salen de la tabla `perfiles` (`002_roles`).
+- Clave temporal con cambio obligatorio en el primer ingreso.
+- El admin general elige la sede; los demás roles entran al panel de su sede, con una tarjeta
+  por sección permitida. La base (RLS) impide lo que el rol no tiene.
 - **Mesas:** crear, editar, activar/inactivar y borrar (una mesa con reservas no se borra:
   se inactiva).
 - **Horarios:** 7 días x 2 jornadas, con edición de hora inicio, hora fin, duración y activo.
@@ -77,7 +80,7 @@ konys-reservas-app/
 ├── components/             componentes presentacionales
 ├── services/               única capa que habla con Supabase
 │   └── __tests__/          pruebas Jest
-├── hooks/                  ReservaConfirmada, useSesionAdmin
+├── hooks/                  ReservaConfirmada, SedeSeleccionada, SesionPersonal
 ├── constants/              colors.js, dominio.js
 ├── supabase/
 │   ├── schema.sql          esquema, RLS, trigger y disponibilidad
@@ -107,7 +110,7 @@ parte del enrutamiento de Expo Router. Las pantallas viven en `app/` en la raíz
 ```bash
 npm install
 cp .env.example .env
-# completar EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY y EXPO_PUBLIC_ADMIN_EMAIL
+# completar EXPO_PUBLIC_SUPABASE_URL y EXPO_PUBLIC_SUPABASE_ANON_KEY
 npx expo start
 ```
 
@@ -164,7 +167,6 @@ Los cambios que toquen reservas deben re-ejecutar CP-05, CP-07, CP-08 y CP-09.
 eas login
 eas env:set --environment preview --name EXPO_PUBLIC_SUPABASE_URL --value "..." --visibility plaintext
 eas env:set --environment preview --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value "..." --visibility plaintext
-eas env:set --environment preview --name EXPO_PUBLIC_ADMIN_EMAIL --value "..." --visibility plaintext
 eas build -p android --profile preview
 ```
 

@@ -1,4 +1,4 @@
-import { validarMesa, validarPlato, validarHorario, validarReserva } from '../validaciones';
+import { validarAcceso, validarClaveNueva, validarUsuario, validarMesa, validarPlato, validarHorario, validarReserva } from '../validaciones';
 
 const base = { cliente_nombre: 'Laura Gómez', num_personas: '4', cliente_contacto: '', acepta_tratamiento_datos: true };
 describe('U-02: formulario de reserva', () => {
@@ -69,4 +69,31 @@ describe('RF-14: formulario de plato', () => {
     { nombre: 'Pizza', categoria: 'pizzas', precio: '1.5' },
     { nombre: 'Pizza', categoria: 'pizzas', precio: 'abc' },
   ])('rechaza %j', (form) => expect(validarPlato(form).valido).toBe(false));
+});
+
+describe('U-02: acceso de personal y clave nueva (F3)', () => {
+  it('acceso: correo válido y clave no vacía', () => {
+    expect(validarAcceso({ correo: ' cabecera@konys.co ', clave: 'x' }).valido).toBe(true);
+    expect(validarAcceso({ correo: 'cabecera', clave: 'x' }).errores.correo).toBeDefined();
+    expect(validarAcceso({ correo: 'a@b.co', clave: '' }).errores.clave).toBeDefined();
+  });
+  it('clave nueva: mínimo 8, máximo 72 y confirmada (05e)', () => {
+    expect(validarClaveNueva({ nueva: '12345678', confirmar: '12345678' }).valido).toBe(true);
+    expect(validarClaveNueva({ nueva: '1234567', confirmar: '1234567' }).errores.nueva).toBe('Mínimo 8 caracteres.');
+    expect(validarClaveNueva({ nueva: 'a'.repeat(73), confirmar: 'a'.repeat(73) }).errores.nueva).toBe('Máximo 72 caracteres.');
+    expect(validarClaveNueva({ nueva: '12345678', confirmar: '12345679' }).errores.confirmar).toBe('Las claves no coinciden.');
+  });
+});
+
+describe('U-02: cuenta de personal (F3C)', () => {
+  const base = { correo: 'laura.m@konys.co', nombre: 'Laura Martínez', clave_temporal: 'Temporal1', rol_id: 'r2' };
+  it('acepta una cuenta nueva completa', () => expect(validarUsuario(base).valido).toBe(true));
+  it('exige correo, nombre, clave de 8 a 72 y rol al crear', () => {
+    const e = validarUsuario({ correo: 'x', nombre: 'L', clave_temporal: '1234567', rol_id: '' }).errores;
+    expect(Object.keys(e).sort()).toEqual(['clave_temporal', 'correo', 'nombre', 'rol_id']);
+    expect(validarUsuario({ ...base, clave_temporal: 'a'.repeat(73) }).errores.clave_temporal).toBe('Máximo 72 caracteres.');
+  });
+  it('al editar no pide correo ni clave', () => {
+    expect(validarUsuario({ nombre: 'Laura', rol_id: 'r2' }, { nuevo: false }).valido).toBe(true);
+  });
 });

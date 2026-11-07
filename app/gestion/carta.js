@@ -1,12 +1,15 @@
-// RF-14: gestión de la carta (crear, editar, ocultar/mostrar y eliminar platos).
-import { useCallback, useRef, useState } from 'react';
+// RF-14 (mockups 10 y 10b): carta de la sede gestionada; crear, editar, ocultar/mostrar y eliminar
+// platos con `carta.gestionar`. F3 (10c): con solo `carta.disponibilidad` (auxiliar de cocina) se
+// ve la lista y únicamente se marca disponible o agotado; la base impide cambiar lo demás.
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native';
-import { useFocusEffect } from 'expo-router';
+import { useFocusEffect, useNavigation } from 'expo-router';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 import { CATEGORIAS } from '../../constants/dominio';
 import { listarTodos, crear, actualizar, borrar } from '../../services/platos';
 import { validarPlato } from '../../services/validaciones';
+import { useGuardiaPersonal, useSesionPersonal } from '../../hooks/SesionPersonal';
 import Boton from '../../components/Boton';
 import EstadoPantalla from '../../components/EstadoPantalla';
 
@@ -14,6 +17,10 @@ const pesos = new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP
 const vacio = { nombre: '', categoria: 'pizzas', descripcion: '', precio: '', disponible: true, foto_url: '' };
 
 export default function CartaAdminScreen() {
+  const { sedeGestion: sede, puede } = useSesionPersonal();
+  const sedeId = sede?.id;
+  const gestiona = puede('carta.gestionar');
+  const navigation = useNavigation();
   const [estado, setEstado] = useState({ data: [], cargando: true, error: null });
   const [form, setForm] = useState(null); // null = lista; objeto = creando o editando
   const [editandoId, setEditandoId] = useState(null);
@@ -26,17 +33,22 @@ export default function CartaAdminScreen() {
   const montada = useRef(true);
 
   const cargar = useCallback(async () => {
+    if (!sedeId) return;
     const id = ++solicitud.current;
     setEstado({ data: [], cargando: true, error: null });
-    const resultado = await listarTodos();
+    const resultado = await listarTodos(sedeId);
     if (id === solicitud.current && montada.current) setEstado({ ...resultado, cargando: false });
-  }, []);
+  }, [sedeId]);
 
   useFocusEffect(useCallback(() => {
     montada.current = true;
     cargar();
     return () => { montada.current = false; solicitud.current += 1; };
   }, [cargar]));
+
+  useEffect(() => {
+    if (sede) navigation.setOptions({ title: `Carta · ${sede.nombre}` });
+  }, [navigation, sede]);
 
   const validacion = form ? validarPlato(form) : null;
   const cambiar = (campo, valor) => setForm((anterior) => ({ ...anterior, [campo]: valor }));
@@ -57,7 +69,7 @@ export default function CartaAdminScreen() {
     setAviso(null);
     try {
       const datos = { nombre: form.nombre.trim(), categoria: form.categoria, descripcion: form.descripcion.trim() || null, precio: form.precio, disponible: form.disponible, foto_url: form.foto_url.trim() || null };
-      const resultado = editandoId ? await actualizar(editandoId, datos) : await crear(datos);
+      const resultado = editandoId ? await actualizar(editandoId, datos) : await crear({ ...datos, sede_id: sedeId });
       if (!montada.current) return;
       if (resultado.error) setAviso(resultado.error);
       else { cancelar(); await cargar(); }
@@ -79,10 +91,12 @@ export default function CartaAdminScreen() {
     if (montada.current) { setProcesandoId(null); if (resultado.error) setAviso(resultado.error); else await cargar(); }
   }
 
+  const guardia = useGuardiaPersonal(['carta.gestionar', 'carta.disponibilidad']);
+  if (guardia) return guardia;
   if (estado.cargando) return <EstadoPantalla cargando />;
   if (estado.error) return <EstadoPantalla mensaje={estado.error} onReintentar={cargar} />;
 
-  if (form) {
+  if (form && gestiona) {
     const mostrarError = (campo) => (tocado || form[campo]) && validacion.errores[campo]
       ? <Text style={styles.error}>{validacion.errores[campo]}</Text> : null;
     return <KeyboardAvoidingView style={styles.pantalla} behavior={Platform.OS === 'ios' ? 'padding' : 'height'} keyboardVerticalOffset={90}>
@@ -129,25 +143,30 @@ export default function CartaAdminScreen() {
     <FlatList data={estado.data ?? []} keyExtractor={(p) => p.id} contentContainerStyle={styles.lista}
       onRefresh={cargar} refreshing={estado.cargando}
       ListEmptyComponent={<EstadoPantalla mensaje="No hay platos registrados." />}
-      ListHeaderComponent={<Boton titulo="Agregar plato" onPress={() => abrir()} />}
+      ListHeaderComponent={<View style={styles.cabeceraLista}>
+        {gestiona ? <Boton titulo="Agregar plato" onPress={() => abrir()} />
+          : <Text style={styles.etiqueta}>Marca los platos agotados para ocultarlos al cliente.</Text>}
+      </View>}
       renderItem={({ item }) => <View style={[styles.plato, !item.disponible && styles.oculto]}>
         <View style={styles.platoContenido}>
           <Text style={styles.platoNombre}>{item.nombre}</Text>
           <Text style={styles.detalle}>{CATEGORIAS[item.categoria]} · {pesos.format(item.precio)}</Text>
           {!item.disponible && <Text style={styles.etiqueta}>Oculto para el cliente</Text>}
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${item.nombre}`} disabled={procesandoId === item.id}
+        {gestiona && <Pressable accessibilityRole="button" accessibilityLabel={`Editar ${item.nombre}`} disabled={procesandoId === item.id}
           onPress={() => abrir(item)} style={styles.accion} hitSlop={8}>
           <Ionicons name="pencil-outline" size={22} color={colors.primario} />
-        </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`${item.disponible ? 'Ocultar' : 'Mostrar'} ${item.nombre}`}
+        </Pressable>}
+        {gestiona ? <Pressable accessibilityRole="button" accessibilityLabel={`${item.disponible ? 'Ocultar' : 'Mostrar'} ${item.nombre}`}
           disabled={procesandoId === item.id} onPress={() => alternarDisponible(item)} style={styles.accion} hitSlop={8}>
           <Ionicons name={item.disponible ? 'eye-off-outline' : 'eye-outline'} size={22} color={colors.secundario} />
         </Pressable>
-        <Pressable accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`} disabled={procesandoId === item.id}
+          : <Switch accessibilityLabel={`${item.nombre} disponible`} value={item.disponible} disabled={procesandoId === item.id}
+            onValueChange={() => alternarDisponible(item)} trackColor={{ true: colors.primario, false: colors.ocupado }} />}
+        {gestiona && <Pressable accessibilityRole="button" accessibilityLabel={`Eliminar ${item.nombre}`} disabled={procesandoId === item.id}
           onPress={() => eliminar(item)} style={styles.accion} hitSlop={8}>
           <Ionicons name="trash-outline" size={22} color={colors.error} />
-        </Pressable>
+        </Pressable>}
       </View>} />
   </View>;
 }
@@ -156,6 +175,7 @@ const styles = StyleSheet.create({
   pantalla: { flex: 1, backgroundColor: colors.fondo },
   lista: { padding: 16, paddingBottom: 40, gap: 10 },
   avisoTop: { paddingHorizontal: 16, paddingTop: 12 },
+  cabeceraLista: { gap: 8 },
   formulario: { padding: 16, paddingBottom: 40, gap: 8 },
   titulo: { fontSize: 20, fontWeight: '800', color: colors.primario, marginBottom: 4 },
   etiqueta: { fontSize: 14, color: colors.secundario },

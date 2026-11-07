@@ -2,7 +2,9 @@ import { Tabs } from 'expo-router/js-tabs';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { colors } from '../../constants/colors';
 
-const iconos = { index: 'home-outline', carta: 'restaurant-outline', admin: 'lock-closed-outline' };
+// La pestaña Inicio vive en /inicio porque la raíz abre la bienvenida (RF-15).
+// F3: sin pestaña Admin; el personal entra por la rueda de ajustes de la bienvenida (05a).
+const iconos = { inicio: 'home-outline', carta: 'restaurant-outline' };
 
 export default function TabsLayout() {
   return (
@@ -14,9 +16,9 @@ export default function TabsLayout() {
       tabBarStyle: { backgroundColor: colors.blanco },
       tabBarIcon: ({ color, size }) => <Ionicons name={iconos[route.name]} color={color} size={size} />,
     })}>
-      <Tabs.Screen name="index" options={{ title: 'Inicio' }} />
-      <Tabs.Screen name="carta" options={{ title: 'Carta' }} />
-      <Tabs.Screen name="admin" options={{ title: 'Admin' }} />
+      {/* Inicio y Carta dibujan su propio encabezado con la sede y "Cambiar sede" (mockups 01 y 04). */}
+      <Tabs.Screen name="inicio" options={{ title: 'Inicio', headerShown: false }} />
+      <Tabs.Screen name="carta" options={{ title: 'Carta', headerShown: false }} />
     </Tabs>
   );
 }
